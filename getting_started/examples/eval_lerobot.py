@@ -53,6 +53,9 @@ import numpy as np
 from lerobot.common.cameras.opencv.configuration_opencv import (  # noqa: F401
     OpenCVCameraConfig,
 )
+from lerobot.common.cameras.orbbec.configuration_orbbec import (  # noqa: F401
+    OrbbecCameraConfig,
+)
 from lerobot.common.robots import (  # noqa: F401
     Robot,
     RobotConfig,

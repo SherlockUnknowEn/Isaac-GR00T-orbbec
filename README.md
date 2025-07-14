@@ -19,6 +19,51 @@
 [![GitHub star chart](https://img.shields.io/github/stars/NVIDIA/Isaac-GR00T?style=flat-square)](https://star-history.com/#NVIDIA/Isaac-GR00T)
 [![Open Issues](https://img.shields.io/github/issues-raw/NVIDIA/Isaac-GR00T?style=flat-square)](https://github.com/NVIDIA/Isaac-GR00T/issues)
 
+## 本项目主要是对Orbbec Gemini 2深度相机提供了支持适配
+
+我们使用的是so101机器手 + Orbbec Gemini 2, 需要安装对应的驱动
+
+### installation
+```sh
+pip install feetech-servo-sdk
+cd ~
+git clone https://github.com/orbbec/pyorbbecsdk.git
+cd pyorbbecsdk
+
+sudo apt-get install python3-dev python3-venv python3-pip python3-opencv
+pip3 install -r requirements.txt
+mkdir build
+cd build
+cmake -Dpybind11_DIR=`pybind11-config --cmakedir` ..
+make -j4
+make install
+
+
+cd ~/pyorbbecsdk 
+pip install -e .
+export PYTHONPATH=$PYTHONPATH:~/pyorbbecsdk/install/lib/
+sudo bash ./scripts/install_udev_rules.sh
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+`getting_started/examples/eval_lerobot.py` 依赖 `huggingface/lerobot` 项目, 并且基于 `https://github.com/huggingface/lerobot/pull/777` 这个PR，本项目已整合在`lerobot`文件夹下, 并添加Orbbec对应的CameraConfig，可直接使用
+
+### usage
+
+参照 `eval_lerobot.py`, 命令行可使用如下配置使用Orbbec相机
+
+```
+--robot.cameras="{ webcam: {type: orbbec, use_depth: True, width: 640, Hi_resolution_mode: False, fps: 30}}"
+```
+
+### deploy
+
+```sh
+./run_server.sh
+./deploy.sh
+```
+
+
 ## NVIDIA Isaac GR00T
 
 <div align="center">
