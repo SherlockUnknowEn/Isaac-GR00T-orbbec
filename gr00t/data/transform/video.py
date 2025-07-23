@@ -172,9 +172,41 @@ class VideoTransform(ModalityTransform):
         num_views = len(views)
         is_batched = views[0].ndim == 5
         bs = views[0].shape[0] if is_batched else 1
+
+        # @fengjie 解决多相机分辨率不一致导致报错的问题
+        # ------------------------------------------------------------------
+        # 1. 计算所有视图的最大 (H, W)
+        #    形状约定：
+        #        np.ndarray : (B,) T H W C   或  T H W C
+        #        torch.Tensor: (B,) T C H W  或  T C H W
+        # ------------------------------------------------------------------
         if isinstance(views[0], torch.Tensor):
+            # torch: ... C H W
+            max_h = max(v.shape[-2] for v in views)
+            max_w = max(v.shape[-1] for v in views)
+            for i, v in enumerate(views):
+                *_, h, w = v.shape[-2:]
+                if (h, w) != (max_h, max_w):
+                    pad_h, pad_w = max_h - h, max_w - w
+                    # F.pad 顺序 (left, right, top, bottom)
+                    views[i] = torch.nn.functional.pad(
+                        v, (0, pad_w, 0, pad_h), mode='constant', value=0
+                    )
+
             views = torch.cat(views, 0)
         elif isinstance(views[0], np.ndarray):
+            # np: ... H W C
+            max_h = max(v.shape[-3] for v in views)
+            max_w = max(v.shape[-2] for v in views)
+
+            for i, v in enumerate(views):
+                *_, h, w, _ = v.shape
+                if (h, w) != (max_h, max_w):
+                    pad_h, pad_w = max_h - h, max_w - w
+                    pad_width = [(0, 0)] * v.ndim
+                    pad_width[-3] = (0, pad_h)   # H
+                    pad_width[-2] = (0, pad_w)   # W
+                    views[i] = np.pad(v, pad_width, mode='constant', constant_values=0)
             views = np.concatenate(views, 0)
         else:
             raise ValueError(f"Unsupported view type: {type(views[0])}")
@@ -258,9 +290,9 @@ class VideoCrop(VideoTransform):
             Callable: If mode is "train", return a random crop transform. If mode is "eval", return a center crop transform.
         """
         # 1. Check the input resolution
-        assert (
-            len(set(self.original_resolutions.values())) == 1
-        ), f"All video keys must have the same resolution, got: {self.original_resolutions}"
+        # assert (
+        #    len(set(self.original_resolutions.values())) == 1
+        # ), f"All video keys must have the same resolution, got: {self.original_resolutions}"
         if self.height is None:
             assert self.width is None, "Height and width must be either both provided or both None"
             self.width, self.height = self.original_resolutions[self.apply_to[0]]
@@ -297,9 +329,9 @@ class VideoCrop(VideoTransform):
                 height, width = data[key].shape[-3:-1]
             else:
                 raise ValueError(f"Backend {self.backend} not supported")
-            assert (
-                height == self.height and width == self.width
-            ), f"Video {key} has invalid shape {height, width}, expected {self.height, self.width}"
+            # assert (
+            #     height == self.height and width == self.width
+            # ), f"Video {key} has invalid shape {height, width}, expected {self.height, self.width}"
 
 
 class VideoResize(VideoTransform):

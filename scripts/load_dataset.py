@@ -168,6 +168,7 @@ def plot_state_action_space(
         ax.legend(by_label.values(), by_label.keys(), loc="upper right")
 
     plt.tight_layout()
+    plt.savefig("output.png")
 
 
 def plot_image(image: np.ndarray):
